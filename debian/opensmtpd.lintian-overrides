@@ -1,0 +1,9 @@
+opensmtpd: hyphen-used-as-minus-sign usr/share/man/man5/aliases.5.gz:30
+opensmtpd: hyphen-used-as-minus-sign usr/share/man/man5/smtpd.conf.5.gz:294
+opensmtpd: hyphen-used-as-minus-sign usr/share/man/man5/smtpd.conf.5.gz:570
+opensmtpd: hyphen-used-as-minus-sign usr/share/man/man8/smtpctl.8.gz:326
+opensmtpd: hyphen-used-as-minus-sign usr/share/man/man8/smtpd.8.gz:96
+# The mistake is in the license text
+opensmtpd: spelling-error-in-copyright GNU Public Licence GNU General Public License
+opensmtpd: spelling-error-in-copyright aheared adhered
+opensmtpd: spelling-error-in-copyright rouines routines
