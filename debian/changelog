@@ -1,3 +1,9 @@
+opensmtpd (6.6.0pre-0~dbf8d71) unstable; urgency=medium
+
+  * Experimental build from upstream towards 6.6.0
+
+ -- Jonas Maurus <jm>  Thu, 03 Oct 2019 22:52:00 +0200
+
 opensmtpd (6.4.2p1-0~772da22) unstable; urgency=medium
 
   * Experimental build from upstream with libssl-1.1 support
