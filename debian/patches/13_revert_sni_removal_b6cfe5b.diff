@@ -1,0 +1,56 @@
+Revert "SNI is available in all LibreSSL versions" (b6cfe5b)
+SNI is not available on OpenSSL versions < 1.1.1. Restores old OpenSSL
+compatibility. (This patch is safe to remove on OpenSSL 1.1.1a.)
+Index: opensmtpd/configure.ac
+===================================================================
+--- opensmtpd.orig/configure.ac
++++ opensmtpd/configure.ac
+@@ -1175,6 +1175,25 @@ AM_CONDITIONAL([HAVE_GCM_CRYPTO], [test
+ ##chl
+ 
+ ##gilles
++OPENSSL_SUPPORTS_SNI=no
++AC_MSG_CHECKING([if programs using TLSEXT_NAMETYPE_host_name will link])
++AC_LINK_IFELSE(
++	[AC_LANG_PROGRAM([[ #include <openssl/ssl.h> ]],
++	[[ SSL_CTX_set_tlsext_servername_callback(NULL, NULL); ]])],
++	[
++		AC_MSG_RESULT([yes])
++		AC_DEFINE([HAVE_TLSEXT_SERVERNAME], [1],
++			[Define if you want to enable TLS extension SERVERNAME])
++		OPENSSL_SUPPORTS_SNI=yes
++	],
++	[
++		AC_MSG_RESULT([no])
++	]
++)
++AM_CONDITIONAL([HAVE_TLSEXT_SERVERNAME], [test $OPENSSL_SUPPORTS_SNI = yes])
++##gilles
++
++##gilles
+ 
+ SMTPD_USER=_smtpd
+ AC_ARG_WITH([user-smtpd],
+Index: opensmtpd/smtpd/smtp.c
+===================================================================
+--- opensmtpd.orig/smtpd/smtp.c
++++ opensmtpd/smtpd/smtp.c
+@@ -343,6 +343,7 @@ smtp_collect(void)
+ static int
+ smtp_sni_callback(SSL *ssl, int *ad, void *arg)
+ {
++#if defined(HAVE_TLSEXT_SERVERNAME)
+ 	const char		*sn;
+ 	void			*ssl_ctx;
+ 
+@@ -354,6 +355,10 @@ smtp_sni_callback(SSL *ssl, int *ad, voi
+ 		return SSL_TLSEXT_ERR_NOACK;
+ 	SSL_set_SSL_CTX(ssl, ssl_ctx);
+ 	return SSL_TLSEXT_ERR_OK;
++#else
++	/* ssl_smtp_init should have ignored the callback if SNI is not supported */
++	fatalx("unexpected call to smtp_sni_callback()");
++#endif /* defined(HAVE_TLSEXT_SERVERNAME) */
+ }
+ 
+ static void
