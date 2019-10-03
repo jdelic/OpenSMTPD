@@ -18,4 +18,5 @@ override_dh_auto_configure:
 
 override_dh_auto_install:
 	dh_auto_install
-	rmdir debian/opensmtpd/usr/bin
+	rm "debian/opensmtpd/usr/bin/*"
+	rmdir "debian/opensmtpd/usr/bin"
