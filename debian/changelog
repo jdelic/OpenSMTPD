@@ -1,4 +1,4 @@
-opensmtpd (6.6.0pre-4~c55ea7b) unstable; urgency=medium
+opensmtpd (6.6.0pre1-4~c55ea7b) unstable; urgency=medium
 
   * Experimental build from upstream 6.6.0 (portable)
 
