@@ -26,12 +26,12 @@
 
 #include "includes.h"
 
+#if !defined(HAVE_ARC4RANDOM) && !defined(LIBRESSL_VERSION_NUMBER)
+
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-
-#ifndef HAVE_ARC4RANDOM
 
 #include <openssl/rand.h>
 #include <openssl/err.h>
