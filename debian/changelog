@@ -1,3 +1,9 @@
+opensmtpd (6.6.0pre1-4~4cf33cd) unstable; urgency=medium
+
+  * Experimental build from upstream 6.6.0 (portable)
+
+ -- Jonas Maurus <jm>  Sat, 02 Nov 2019 21:33 +0100
+
 opensmtpd (6.6.0pre1-4~c55ea7b) unstable; urgency=medium
 
   * Experimental build from upstream 6.6.0 (portable)
