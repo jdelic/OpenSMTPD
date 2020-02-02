@@ -1,0 +1,19 @@
+Description: Update path to aliases file on Debian
+Author: Ryan Kavanagh <rak@debian.org>
+Origin: vendor
+Forwarded: not-needed
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+Index: opensmtpd-6.4.2p1/smtpd/smtpd.conf
+===================================================================
+--- opensmtpd-6.4.2p1.orig/smtpd/smtpd.conf
++++ opensmtpd-6.4.2p1/smtpd/smtpd.conf
+@@ -3,7 +3,7 @@
+ # This is the smtpd server system-wide configuration file.
+ # See smtpd.conf(5) for more information.
+ 
+-table aliases file:/etc/mail/aliases
++table aliases file:/etc/aliases
+ 
+ # To accept external mail, replace with: listen on all
+ #
