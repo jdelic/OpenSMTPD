@@ -5,7 +5,7 @@ Index: opensmtpd/configure.ac
 ===================================================================
 --- opensmtpd.orig/configure.ac
 +++ opensmtpd/configure.ac
-@@ -1175,6 +1175,25 @@ AM_CONDITIONAL([HAVE_GCM_CRYPTO], [test
+@@ -1136,6 +1136,25 @@ AM_CONDITIONAL([HAVE_GCM_CRYPTO], [test
  ##chl
  
  ##gilles

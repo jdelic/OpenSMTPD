@@ -5,7 +5,7 @@ Index: opensmtpd/configure.ac
 ===================================================================
 --- opensmtpd.orig/configure.ac
 +++ opensmtpd/configure.ac
-@@ -1155,6 +1155,25 @@ fi
+@@ -1116,6 +1116,25 @@ fi
  #l2816
  
  
@@ -49,7 +49,7 @@ Index: opensmtpd/mk/smtpd/Makefile.am
 ===================================================================
 --- opensmtpd.orig/mk/smtpd/Makefile.am
 +++ opensmtpd/mk/smtpd/Makefile.am
-@@ -71,7 +71,9 @@ smtpd_SOURCES+=		$(smtpd_srcdir)/util.c
+@@ -70,7 +70,9 @@ smtpd_SOURCES+=		$(smtpd_srcdir)/util.c
  smtpd_SOURCES+=		$(smtpd_srcdir)/waitq.c
  
  # backends
@@ -168,7 +168,7 @@ Index: opensmtpd/smtpd/smtpctl.c
 ===================================================================
 --- opensmtpd.orig/smtpd/smtpctl.c
 +++ opensmtpd/smtpd/smtpctl.c
-@@ -1314,7 +1314,9 @@ static void
+@@ -1323,7 +1323,9 @@ static void
  display(const char *s)
  {
  	FILE   *fp;
@@ -178,7 +178,7 @@ Index: opensmtpd/smtpd/smtpctl.c
  	int	gzipped;
  	char   *gzcat_argv0 = strrchr(PATH_GZCAT, '/') + 1;
  
-@@ -1322,6 +1324,7 @@ display(const char *s)
+@@ -1331,6 +1333,7 @@ display(const char *s)
  		err(1, "fopen");
  
  	if (is_encrypted_fp(fp)) {
@@ -186,7 +186,7 @@ Index: opensmtpd/smtpd/smtpctl.c
  		int	i;
  		FILE   *ofp = NULL;
  
-@@ -1344,6 +1347,10 @@ display(const char *s)
+@@ -1353,6 +1356,10 @@ display(const char *s)
  		fclose(fp);
  		fp = ofp;
  		fseek(fp, 0, SEEK_SET);
@@ -201,7 +201,7 @@ Index: opensmtpd/smtpd/smtpd.c
 ===================================================================
 --- opensmtpd.orig/smtpd/smtpd.c
 +++ opensmtpd/smtpd/smtpd.c
-@@ -673,12 +673,14 @@ main(int argc, char *argv[])
+@@ -676,12 +676,14 @@ main(int argc, char *argv[])
  		errx(1, "config file exceeds PATH_MAX");
  
  	if (env->sc_opts & SMTPD_OPT_NOACTION) {
