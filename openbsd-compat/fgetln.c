@@ -18,7 +18,8 @@
  * portable fgetln() version, NOT reentrant
  */
 
-#ifndef HAVE_FGETLN
+#include "includes.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -57,4 +58,4 @@ fgetln(FILE *fp, size_t *len)
 	}
 	return (*len = r) ? buf : NULL;
 }
-#endif
+

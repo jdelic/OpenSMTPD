@@ -40,11 +40,11 @@ smtpctl_CFLAGS+=	-DPATH_GZCAT=\"$(ZCAT)\" \
 
 AM_CPPFLAGS=		-I$(top_srcdir)/smtpd			\
 			-I$(top_srcdir)/openbsd-compat
-if !SUPPORT_ERR_H
+if !NEED_ERR_H
 AM_CPPFLAGS += -I$(top_srcdir)/openbsd-compat/err_h
 endif
 
-LIBCOMPAT=		$(top_builddir)/openbsd-compat/libopenbsd-compat.a
+LIBCOMPAT=		$(top_builddir)/openbsd-compat/libopenbsd.a
 
 LDADD=			$(LIBCOMPAT)
 if HAVE_DB_API
@@ -69,6 +69,9 @@ PATHSUBS=		-e 's|/var/run/smtpd.sock|$(sockdir)/smtpd.sock|g'	\
 
 FIXPATHSCMD=		$(SED) $(PATHSUBS)
 
+if NEED_LIBASR
+AM_CPPFLAGS+=	-I$(top_srcdir)/openbsd-compat/libasr
+endif
 
 $(MANPAGES): $(MANPAGES_IN)
 	manpage=$(smtpd_srcdir)/`echo $@ | sed 's/\.out$$//'`; \

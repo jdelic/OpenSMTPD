@@ -113,6 +113,7 @@ AC_SUBST([MANFMT])
 #
 
 
+
 #
 # CHECKS FOR HEADERS
 #
@@ -146,11 +147,10 @@ AC_CHECK_HEADERS([ \
 	time.h \
 	ucred.h \
 	util.h \
-	utime.h \
 	vis.h
 ])
 
-AM_CONDITIONAL([SUPPORT_ERR_H], [test x$HAVE_ERR_H = x1])
+AM_CONDITIONAL([NEED_ERR_H], [test x$HAVE_ERR_H = x1])
 AM_CONDITIONAL([SUPPORT_PATHS_H], [test x$HAVE_PATHS_H = x1])
 
 # NetBSD requires sys/types.h before login_cap.h
@@ -167,14 +167,22 @@ AC_CHECK_HEADERS([bsd/libutil.h libutil.h])
 
 AC_CHECK_HEADER([fts.h],
 	[],
-	[AC_MSG_ERROR([*** fts.h missing - please install fts library ***])],
+	[AC_MSG_ERROR([*** fts.h missing - please install libfts ***])],
 	[
 #include <sys/types.h>
 #include <sys/stat.h>
 ])
 
-
-
+need_libasr=no
+AC_CHECK_HEADER([asr.h],
+	[],
+	[need_libasr=yes],
+	[
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+])
+AM_CONDITIONAL([NEED_LIBASR], [test x"$need_libasr" = x"yes"])
 
 #
 # CHECKS FOR TYPES
@@ -255,6 +263,8 @@ AC_CHECK_TYPES([struct addrinfo], [], [], [
 AC_CHECK_TYPES([struct timeval], [], [], [
 #include <sys/time.h>
 ])
+
+AC_CHECK_DECL([LLONG_MAX], [have_llong_max=1], , [#include <limits.h>])
 
 
 #
@@ -397,24 +407,18 @@ AC_ARG_WITH([libs],
 #
 # CHECKS FOR LIBRARY FUNCTIONS
 #
-BASENAME_SUPPORT=no
 AC_SEARCH_LIBS([basename],
 	[gen],
 	[
 		AC_DEFINE([HAVE_BASENAME], [1], 
 			[Define if you have the basename() function.])
-		BASENAME_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_BASENAME], [test $BASENAME_SUPPORT = yes])
 
-
-CLOSEFROM_SUPPORT=no
 AC_SEARCH_LIBS([closefrom],
 	[gen],
 	[
 		AC_DEFINE([HAVE_CLOSEFROM], [1], 
 			[Define if you have the closefrom() function.])
-		CLOSEFROM_SUPPORT=yes
         AC_COMPILE_IFELSE(
             [
                 AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT], [[int res = closefrom(0);]])
@@ -422,200 +426,154 @@ AC_SEARCH_LIBS([closefrom],
             AC_DEFINE(HAVE_CLOSEFROM_INT, 1, [closefrom return int])
         )
 	])
-AM_CONDITIONAL([SUPPORT_CLOSEFROM], [test $CLOSEFROM_SUPPORT = yes])
 
-UTIMES_SUPPORT=no
-AC_SEARCH_LIBS([utimes],
-	[c89],
-	[
-		AC_DEFINE([HAVE_UTIMES],
-			[1], [Define if you have the utimes() function.])
-		UTIMES_SUPPORT=yes
-	])
-AM_CONDITIONAL([SUPPORT_UTIMES], [test $UTIMES_SUPPORT = yes])
-
-FMT_SCALED_SUPPORT=no
 AC_SEARCH_LIBS([fmt_scaled],
 	[util bsd],
 	[
 		AC_DEFINE([HAVE_FMT_SCALED], [1],
 			[Define if you have the fmt_scaled() function.])
-		FMT_SCALED_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_FMT_SCALED], [test $FMT_SCALED_SUPPORT = yes])
 
-DIRNAME_SUPPORT=no
 AC_SEARCH_LIBS([dirname],
 	[gen],
 	[
 		AC_DEFINE([HAVE_DIRNAME], [1],
 			[Define if you have the dirname() function.])
-		DIRNAME_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_DIRNAME], [test $DIRNAME_SUPPORT = yes])
 
-ERRC_SUPPORT=no
-AC_CHECK_FUNC([errc],
-	[
-		AC_DEFINE([HAVE_ERRC], [1],
-			[Define if you have the errc() function.])
-		ERRC_SUPPORT=yes
-	])
-AM_CONDITIONAL([SUPPORT_ERRC], [test $ERRC_SUPPORT = yes])
-
-INET_NET_PTON_SUPPORT=no
 AC_SEARCH_LIBS([inet_net_pton],
-	[resolv],
+	[resolv bsd],
 	[
 		AC_DEFINE([HAVE_INET_NET_PTON], [1],
 			[Define if you have the inet_net_pton() function.])
-		INET_NET_PTON_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_INET_NET_PTON], [test $INET_NET_PTON_SUPPORT = yes])
 
-CLOCK_GETTIME_SUPPORT=no
 AC_SEARCH_LIBS([clock_gettime],
 	[rt],
 	[
 		AC_DEFINE([HAVE_CLOCK_GETTIME], [1],
 			[Define if you have the clock_gettime() function.])
-		CLOCK_GETTIME_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_CLOCK_GETTIME], [test $CLOCK_GETTIME_SUPPORT = yes])
 
-FTS_OPEN_SUPPORT=no
 AC_SEARCH_LIBS([fts_open],
 	[fts],
 	[
 		AC_DEFINE([HAVE_FTS_OPEN], [1],
 			[Define if you have the fts_open() function.])
-		FTS_OPEN_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_FTS_OPEN], [test $FTS_OPEN_SUPPORT = yes])
 
-FLOCK_SUPPORT=no
-AC_SEARCH_LIBS([flock],
-	[],
-	[
-		AC_DEFINE([HAVE_FLOCK], [1],
-			[Define if you have the flock() function.])
-		FLOCK_SUPPORT=yes
-	])
-AM_CONDITIONAL([SUPPORT_FLOCK], [test $FLOCK_SUPPORT = yes])
-
-DAEMON_SUPPORT=no
 AC_SEARCH_LIBS([daemon],
 	[bsd],
 	[
 		AC_DEFINE([HAVE_DAEMON], [1],
 			[Define if you have the daemon() function.])
-		DAEMON_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_DAEMON], [test $DAEMON_SUPPORT = yes])
 
-FPARSELN_SUPPORT=no
 AC_SEARCH_LIBS([fparseln],
 	[util],
 	[
 		AC_DEFINE([HAVE_FPARSELN], [1],
 			[Define if you have the fparseln() function.])
-		FPARSELN_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_FPARSELN], [test $FPARSELN_SUPPORT = yes])
 
-RES_9_B64_NTOP_SUPPORT=no
+AC_SEARCH_LIBS([res_hnok],
+	[resolv],
+	[
+		AC_DEFINE([HAVE_RES_HNOK], [1],
+			[Define if you have the res_hnok() function.])
+	])
+
+AC_SEARCH_LIBS([res_randomid],
+	[resolv],
+	[
+		AC_DEFINE([HAVE_RES_RANDOMID], [1],
+			[Define if you have the res_randomid() function.])
+	])
+
 AC_SEARCH_LIBS([res_9_b64_ntop],
 	[resolv],
 	[
 		AC_DEFINE([HAVE_RES_9_B64_NTOP], [1],
 			[Define if you have the res_9_b64_ntop() function.])
-		RES_9_B64_NTOP_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_RES_9_B64_NTOP], [test $RES_9_B64_NTOP_SUPPORT = yes])
 
-SETSOCKOPT_SUPPORT=no
+AC_SEARCH_LIBS([__b64_pton],
+	[resolv],
+	[
+		AC_DEFINE([HAVE___B64_PTON], [1],
+			[Define if you have the __b64_pton() function.])
+	])
+
+AC_SEARCH_LIBS([b64_pton],
+	[resolv],
+	[
+		AC_DEFINE([HAVE_B64_PTON], [1],
+			[Define if you have the b64_pton() function.])
+	])
+
+AC_SEARCH_LIBS([__b64_ntop],
+	[resolv],
+	[
+		AC_DEFINE([HAVE___B64_NTOP], [1],
+			[Define if you have the b64_ntop() function.])
+	])
+
+AC_SEARCH_LIBS([b64_ntop],
+	[resolv],
+	[
+		AC_DEFINE([HAVE_B64_NTOP], [1],
+			[Define if you have the b64_ntop() function.])
+	])
+
 AC_SEARCH_LIBS([setsockopt],
 	[socket],
 	[
 		AC_DEFINE([HAVE_SETSOCKOPT], [1],
 			[Define if you have the setsockopt() function.])
-		SETSOCKOPT_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_SETSOCKOPT], [test $SETSOCKOPT_SUPPORT = yes])
 
-CRYPT_SUPPORT=no
 AC_SEARCH_LIBS([crypt],
 	[crypt],
 	[
 		AC_DEFINE([HAVE_CRYPT], [1],
 			[Define if you have the crypt() function.])
-		CRYPT_SUPPORT=yes
 	])
-AM_CONDITIONAL([SUPPORT_CRYPT], [test $CRYPT_SUPPORT = yes])
 
-GETLINE_SUPPORT=no
-AC_CHECK_FUNC([getline],
+AC_SEARCH_LIBS([imsg_init],
+	[util],
 	[
-		AC_DEFINE([HAVE_GETLINE], [1],
-			[Define if you have the getline() function.])
-		GETLINE_SUPPORT=yes
+		AC_DEFINE([HAVE_IMSG], [1], 
+			[Define if you have the imsg framework.])
 	])
-AM_CONDITIONAL([SUPPORT_GETLINE], [test $GETLINE_SUPPORT = yes])
 
-EXPLICIT_BZERO_SUPPORT=no
-AC_CHECK_FUNC([explicit_bzero],
+AC_SEARCH_LIBS([event_asr_run],
+	[event],
 	[
-		AC_DEFINE([HAVE_EXPLICIT_BZERO], [1],
-			[Define if you have the explicit_bzero() function.])
-		EXPLICIT_BZERO_SUPPORT=yes
+		AC_DEFINE([HAVE_EVENT_ASR_RUN], [1],
+			[Define if you have the event_asr_run() function.])
 	])
-AM_CONDITIONAL([SUPPORT_EXPLICIT_BZERO], [test $EXPLICIT_BZERO_SUPPORT = yes])
-
-CRYPT_CHECKPASS_SUPPORT=no
-AC_CHECK_FUNC([crypt_checkpass],
-	[
-		AC_DEFINE([HAVE_CRYPT_CHECKPASS], [1],
-			[Define if you have the crypt_checkpass() function.])
-		CRYPT_CHECKPASS_SUPPORT=yes
-	])
-AM_CONDITIONAL([SUPPORT_CRYPT_CHECKPASS], [test $CRYPT_CHECKPASS_SUPPORT = yes])
-
-STRNDUP_SUPPORT=no
-AC_CHECK_FUNC([strndup],
-	[
-		AC_DEFINE([HAVE_STRNDUP], [1],
-			[Define if you have the strndup() function.])
-		STRNDUP_SUPPORT=yes
-	])
-AM_CONDITIONAL([SUPPORT_STRNDUP], [test $STRNDUP_SUPPORT = yes])
-
-STRNLEN_SUPPORT=no
-AC_CHECK_FUNC([strnlen],
-	[
-		AC_DEFINE([HAVE_STRNLEN], [1],
-			[Define if you have the strnlen() function.])
-		STRNLEN_SUPPORT=yes
-	])
-AM_CONDITIONAL([SUPPORT_STRNLEN], [test $STRNLEN_SUPPORT = yes])
 
 AC_CHECK_FUNCS([ \
 	asprintf \
-	b64_ntop \
-	__b64_ntop \
-	b64_pton \
-	__b64_pton \
+	arc4random \
 	bcopy \
 	calloc_conceal \
 	chflags \
 	crypt_checkpass \
 	dirfd \
-	endgrent \
+	err \
+	errc \
+	errx \
 	explicit_bzero \
 	fchflags \
 	fgetln \
+	flock \
 	freeaddrinfo \
 	freezero \
 	getaddrinfo \
+	getdtablesize \
+	getdtablecount \
+	getline \
 	getnameinfo \
 	gettimeofday \
 	getopt \
@@ -625,23 +583,26 @@ AC_CHECK_FUNCS([ \
 	inet_aton \
 	inet_ntoa \
 	inet_ntop \
-	isblank \
 	malloc_conceal \
 	memmove \
+	nanosleep \
 	nsleep \
 	pidfile \
-	pw_dup \
+	pledge \
 	reallocarray \
 	recallocarray \
 	res_hnok \
+	res_randomid \
 	setenv \
-	setlinebuf \
+	seteuid \
+	setegid \
 	setproctitle \
 	setregid \
 	setreuid \
 	setresuid \
 	setresgid \
 	setsid \
+	signal \
 	sigaction \
 	snprintf \
 	socketpair \
@@ -650,17 +611,20 @@ AC_CHECK_FUNCS([ \
 	strlcat \
 	strlcpy \
 	strmode \
+	strndup \
+	strnlen \
 	strnvis \
 	strtonum \
 	sysconf \
 	tcgetpgrp \
 	time \
-	truncate \
+	usleep \
 	vasprintf \
 	vsnprintf \
 	waitpid \
+	warn \
+	warnx \
 ])
-AC_DEFINE([HAVE_PLEDGE], [0], [compat layer is not pledge ready])
 
 AC_CHECK_DECL([strsep],
 	[AC_CHECK_FUNCS([strsep])],
@@ -670,7 +634,6 @@ AC_CHECK_DECL([strsep],
 # include <string.h>
 #endif
 	])
-
 
 
 # These functions might be found in libressl
@@ -703,10 +666,6 @@ fi
 ###
 ### EVERYTHING BELOW MUST BE CLEANED AND MOVED ABOVE
 ###
-
-
-AC_CHECK_DECL([LLONG_MAX], [have_llong_max=1], , [#include <limits.h>])
-#l108
 
 #l150 (without _FORTIFY_SOURCE=2)
 if test "$GCC" = "yes" -o "$GCC" = "egcs"; then
@@ -930,7 +889,6 @@ fi
 
 #l432 (customized)
 # Check for some target-specific stuff
-ASR_LIB=-lasr
 
 case "$host" in
 *-*-darwin*)
@@ -960,6 +918,7 @@ main() { if (NSVersionOfRunTimeLibrary("System") >= (60 << 16))
 		supported by bsd-setproctitle.c])
 	AC_DEFINE([BROKEN_STRNVIS], [1],
 	    [OSX strnvis argument order is swapped compared to OpenBSD])
+	BROKEN_STRNVIS=1
 	;;
 *-*-dragonfly*)
 	;;
@@ -974,11 +933,13 @@ main() { if (NSVersionOfRunTimeLibrary("System") >= (60 << 16))
 	fi
 	AC_DEFINE([BROKEN_STRNVIS], [1],
 	    [NetBSD strnvis argument order is swapped compared to OpenBSD])
+	BROKEN_STRNVIS=1
 	;;
 *-*-freebsd*)
 	AC_DEFINE([BROKEN_GLOB], [1], [FreeBSD glob does not do what we need])
 	AC_DEFINE([BROKEN_STRNVIS], [1],
 	    [FreeBSD strnvis argument order is swapped compared to OpenBSD])
+	BROKEN_STRNVIS=1
 	;;
 *-*-openbsd*)
 	use_pie=auto
@@ -987,6 +948,7 @@ main() { if (NSVersionOfRunTimeLibrary("System") >= (60 << 16))
 
 	AC_DEFINE([BROKEN_STRNVIS], [0],
 	    [FreeBSD strnvis argument order is swapped compared to OpenBSD])
+	BROKEN_STRNVIS=0
 	YACC='yacc'
 	ASR_LIB=
 	AC_DEFINE([NOOP_ASR_FREEADDRINFO], [0], [OpenBSD doesn't need ASR_FREEADDRINFO])
@@ -1128,7 +1090,6 @@ AC_ARG_WITH([auth-pam],
 AC_DEFINE_UNQUOTED([USE_PAM_SERVICE], ["$USE_PAM_SERVICE"], [pam service])
 AC_SUBST([USE_PAM_SERVICE])
 
-AC_CHECK_FUNCS([arc4random arc4random_buf arc4random_stir arc4random_uniform])
 
 # Check for older PAM
 if test "x$PAM_MSG" = "xyes"; then
@@ -1682,61 +1643,6 @@ AC_EXEEXT
 #l4757
 
 
-# Search for asr (based on zlib checks)
-dnl asr is required
-AC_ARG_WITH([libasr],
-	[  --with-libasr=PATH		Specify path to libasr installation],
-	[ if test "x$withval" = "xno"; then
-		AC_MSG_ERROR([*** asr is required ***])
-	  elif test "x$withval" != "xyes"; then
-		if test -d "$withval/lib"; then
-			if test -n "${need_dash_r}"; then
-				LDFLAGS="-L${withval}/lib -R${withval}/lib ${LDFLAGS}"
-			else
-				LDFLAGS="-L${withval}/lib ${LDFLAGS}"
-			fi
-		else
-			if test -n "${need_dash_r}"; then
-				LDFLAGS="-L${withval} -R${withval} ${LDFLAGS}"
-			else
-				LDFLAGS="-L${withval} ${LDFLAGS}"
-			fi
-		fi
-		if test -d "$withval/include"; then
-			CPPFLAGS="-I${withval}/include ${CPPFLAGS}"
-		else
-			CPPFLAGS="-I${withval} ${CPPFLAGS}"
-		fi
-	fi ]
-)
-
-AC_CHECK_HEADER([asr.h], ,[AC_MSG_ERROR([*** asr.h missing - please install first or check config.log ***])],
-[#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>])
-AC_CHECK_LIB([asr], [asr_run], ,
-	[
-		saved_CPPFLAGS="$CPPFLAGS"
-		saved_LDFLAGS="$LDFLAGS"
-		save_LIBS="$LIBS"
-		dnl Check default asr install dir
-		if test -n "${need_dash_r}"; then
-			LDFLAGS="-L/usr/local/lib -R/usr/local/lib ${saved_LDFLAGS}"
-		else
-			LDFLAGS="-L/usr/local/lib ${saved_LDFLAGS}"
-		fi
-		CPPFLAGS="-I/usr/local/include ${saved_CPPFLAGS}"
-# don't add -lasr to LIBS, it's only added when needed
-#		LIBS="$LIBS -lasr"
-		AC_TRY_LINK_FUNC([asr_run], ,
-			[
-				AC_MSG_ERROR([*** libasr missing - please install first or check config.log ***])
-			]
-		)
-	]
-)
-
-
 # Search for fts
 AC_ARG_WITH([libfts],
 	[  --with-libfts=PATH		Specify path to libfts installation (default: none, part of libc)],
@@ -1818,8 +1724,9 @@ if test "x${need_libevent_autodetect}" != "xno"; then
    done
 fi
 
+AC_CHECK_HEADER([event.h], ,[AC_MSG_ERROR([*** event.h missing - please install libevent ***])],
+[#include <sys/types.h>])
 LIBS="-levent $LIBS"
-
 AC_MSG_CHECKING([if programs using libevent functions will link])
 AC_LINK_IFELSE(
 	[AC_LANG_PROGRAM([[
@@ -1969,6 +1876,9 @@ AC_LINK_IFELSE(
 		)
 	]
 )
+
+AC_CHECK_DECL([LIBRESSL_VERSION_NUMBER], , , [#include <openssl/ssl.h>])
+
 #l2371
 
 
@@ -2071,9 +1981,68 @@ AM_COND_IF([HAVE_DB_API], [AC_DEFINE([HAVE_DB_API], [1], [Define to 1 if HAVE_DB
 
 
 
+if test "$need_libasr" = "no" -a "x$ac_cv_search_event_asr_run" = "xno"; then
+	LIBS="$LIBS -lasr"
+fi
+
 
 LIBS="$LIBS ${SMTPDLIBS}"
 ##end of chl
+
+
+##
+#AM_CONDITIONAL([NEED_BASENAME], [test "x$ac_cv_have_basename" != "xyes"])
+AM_CONDITIONAL([NEED_BASE64], [test "x$ac_cv_search_b64_ntop" = "xno" -a "x$ac_cv_search___b64_ntop" = "xno" ])
+AM_CONDITIONAL([NEED_BASENAME], [test "x$ac_cv_search_basename" = "xno"])
+AM_CONDITIONAL([NEED_CLOCK_GETTIME], [test "x$ac_cv_search_clock_gettime" = "xno"])
+AM_CONDITIONAL([NEED_CLOSEFROM], [test "x$ac_cv_search_closefrom" = "xno"])
+AM_CONDITIONAL([NEED_DAEMON], [test "x$ac_cv_search_daemon" = "xno"])
+AM_CONDITIONAL([NEED_DIRNAME], [test "x$ac_cv_search_dirname" = "xno"])
+AM_CONDITIONAL([NEED_EVENT_ASR_RUN], [test "x$ac_cv_search_event_asr_run" = "xno"])
+AM_CONDITIONAL([NEED_FMT_SCALED], [test "x$ac_cv_search_fmt_scaled" = "xno"])
+AM_CONDITIONAL([NEED_FPARSELN], [test "x$ac_cv_search_fparseln" = "xno"])
+AM_CONDITIONAL([NEED_IMSG], [test "x$ac_cv_search_imsg_init" = "xno"])
+AM_CONDITIONAL([NEED_INET_NET_PTON], [test "x$ac_cv_search_inet_net_pton" = "xno"])
+
+AM_CONDITIONAL([NEED_ERR], [test "x$ac_cv_func_err" != "xyes"])
+AM_CONDITIONAL([NEED_ERRC], [test "x$ac_cv_func_errc" != "xyes"])
+AM_CONDITIONAL([NEED_CRYPT_CHECKPASS], [test "x$ac_cv_func_crypt_checkpass" != "xyes"])
+AM_CONDITIONAL([NEED_EXPLICIT_BZERO], [test "x$ac_cv_func_explicit_bzero" != "xyes"])
+AM_CONDITIONAL([NEED_FGETLN], [test "x$ac_cv_func_fgetln" != "xyes"])
+AM_CONDITIONAL([NEED_FREEZERO], [test "x$ac_cv_func_freezero" != "xyes"])
+AM_CONDITIONAL([NEED_GETOPT], [test "x$ac_cv_func_getopt" != "xyes"])
+AM_CONDITIONAL([NEED_GETPEEREID], [test "x$ac_cv_func_getpeereid" != "xyes"])
+AM_CONDITIONAL([NEED_NANOSLEEP], [test "x$ac_cv_func_nanosleep" != "xyes"])
+AM_CONDITIONAL([NEED_PIDFILE], [test "x$ac_cv_func_pidfile" != "xyes"])
+AM_CONDITIONAL([NEED_REALLOCARRAY], [test "x$ac_cv_func_reallocarray" != "xyes"])
+AM_CONDITIONAL([NEED_RECALLOCARRAY], [test "x$ac_cv_func_recallocarray" != "xyes"])
+AM_CONDITIONAL([NEED_SETPROCTITLE], [test "x$ac_cv_func_setproctitle" != "xyes"])
+AM_CONDITIONAL([NEED_SETEGID], [test "x$ac_cv_func_setegid" != "xyes"])
+AM_CONDITIONAL([NEED_SETEUID], [test "x$ac_cv_func_seteuid" != "xyes"])
+AM_CONDITIONAL([NEED_SETRESGID], [test "x$ac_cv_func_setresgid" != "xyes"])
+AM_CONDITIONAL([NEED_SETRESUID], [test "x$ac_cv_func_setresuid" != "xyes"])
+AM_CONDITIONAL([NEED_SIGNAL], [test "x$ac_cv_func_signal" != "xyes"])
+AM_CONDITIONAL([NEED_STRERROR], [test "x$ac_cv_func_strerror" != "xyes"])
+AM_CONDITIONAL([NEED_STRLCAT], [test "x$ac_cv_func_strlcat" != "xyes"])
+AM_CONDITIONAL([NEED_STRLCPY], [test "x$ac_cv_func_strlcpy" != "xyes"])
+AM_CONDITIONAL([NEED_STRMODE], [test "x$ac_cv_func_strmode" != "xyes"])
+AM_CONDITIONAL([NEED_STRSEP], [test "x$ac_cv_func_strsep" != "xyes"])
+AM_CONDITIONAL([NEED_STRTONUM], [test "x$ac_cv_func_strtonum" != "xyes"])
+AM_CONDITIONAL([NEED_STRNDUP], [test "x$ac_cv_func_strndup" != "xyes"])
+AM_CONDITIONAL([NEED_STRNLEN], [test "x$ac_cv_func_strnlen" != "xyes"])
+AM_CONDITIONAL([NEED_WAITPID], [test "x$ac_cv_func_waitpid" != "xyes"])
+AM_CONDITIONAL([NEED_VIS], [test "x$ac_cv_func_strnvis" != "xyes" -o "x$BROKEN_STRNVIS" = "x1"])
+AM_CONDITIONAL([NEED_USLEEP], [test "x$ac_cv_func_usleep" != "xyes"])
+
+AM_CONDITIONAL([NEED_RES_HNOK], [test "x$ac_cv_search_res_hnok" = "xno" -a x"$ac_cv_func_res_hnok" != "xyes" -a x"$need_libasr" = x"yes"])
+AM_CONDITIONAL([NEED_RES_RANDOMID], [test "x$ac_cv_search_res_randomid" = "xno" -a x"$ac_cv_func_res_randomid" != "xyes" -a x"$need_libasr" = x"yes"])
+
+AM_CONDITIONAL([NEED_ARC4RANDOM], [test "x$ac_cv_func_arc4random" != "xyes" -a "x$ac_cv_have_decl_LIBRESSL_VERSION_NUMBER" != "xyes"])
+AM_CONDITIONAL([NEED_SSL_CTX_USE_CERTIFICATE_CHAIN_MEM], [test "x$ac_cv_have_decl_LIBRESSL_VERSION_NUMBER" != "xyes"])
+
+AM_CONDITIONAL([NEED_PROGNAME], [test "x$ac_cv_libc_defines___progname" != "xyes"])
+##
+
 
 AC_CONFIG_FILES([Makefile
 		openbsd-compat/Makefile

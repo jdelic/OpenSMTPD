@@ -1,4 +1,4 @@
-/*	$OpenBSD: smtpd.h,v 1.641 2019/09/30 08:31:41 martijn Exp $	*/
+/*	$OpenBSD: smtpd.h,v 1.652 2020/01/31 22:01:20 gilles Exp $	*/
 
 /*
  * Copyright (c) 2008 Gilles Chehade <gilles@poolp.org>
@@ -73,7 +73,7 @@
 #ifndef SMTPD_NAME
 #define	SMTPD_NAME		 "OpenSMTPD"
 #endif
-#define	SMTPD_VERSION		 "6.6.0-portable"
+#define	SMTPD_VERSION		 "6.6.2-portable"
 #define SMTPD_SESSION_TIMEOUT	 300
 #define SMTPD_BACKLOG		 5
 
@@ -515,6 +515,7 @@ struct envelope {
 	char				smtpname[HOST_NAME_MAX+1];
 	char				helo[HOST_NAME_MAX+1];
 	char				hostname[HOST_NAME_MAX+1];
+	char				username[SMTPD_MAXMAILADDRSIZE];
 	char				errorline[LINE_MAX];
 	struct sockaddr_storage		ss;
 
@@ -610,7 +611,7 @@ struct smtpd {
 	size_t				sc_scheduler_max_msg_batch_size;
 	size_t				sc_scheduler_max_schedule;
 
-	struct dict		       *sc_processors_dict;
+	struct dict		       *sc_filter_processes_dict;
 
 	int				sc_ttl;
 #define MAX_BOUNCE_WARN			4
@@ -1057,22 +1058,29 @@ enum lka_resp_status {
 	LKA_PERMFAIL
 };
 
-struct processor {
-	const char		       *command;
-	const char		       *user;
-	const char		       *group;
-	const char		       *chroot;
-	int				errfd;
-};
-
 enum filter_type {
 	FILTER_TYPE_BUILTIN,
 	FILTER_TYPE_PROC,
 	FILTER_TYPE_CHAIN,
 };
 
+enum filter_subsystem {
+	FILTER_SUBSYSTEM_SMTP_IN	= 1<<0,
+	FILTER_SUBSYSTEM_SMTP_OUT	= 1<<1,
+};
+
+struct filter_proc {
+	const char		       *command;
+	const char		       *user;
+	const char		       *group;
+	const char		       *chroot;
+	int				errfd;
+	enum filter_subsystem		filter_subsystem;
+};
+
 struct filter_config {
 	char			       *name;
+	enum filter_subsystem		filter_subsystem;
 	enum filter_type		filter_type;
 	enum filter_phase               phase;
 	char                           *reject;
@@ -1080,6 +1088,7 @@ struct filter_config {
 	char                           *rewrite;
 	char                           *report;
 	uint8_t				junk;
+  	uint8_t				bypass;
 	char                           *proc;
 
 	const char		      **chain;
@@ -1109,6 +1118,15 @@ struct filter_config {
 
 	int8_t                          not_helo_regex;
 	struct table                   *helo_regex;
+
+  	int8_t                          not_auth;
+	int8_t				auth;
+
+  	int8_t                          not_auth_table;
+	struct table                   *auth_table;
+
+	int8_t                          not_auth_regex;
+	struct table                   *auth_regex;
 
 	int8_t                          not_mail_from_table;
 	struct table                   *mail_from_table;
@@ -1160,7 +1178,7 @@ enum dispatcher_type {
 };
 
 struct dispatcher_local {
-	uint8_t requires_root;	/* only for MBOX */
+	uint8_t is_mbox;	/* only for MBOX */
 
 	uint8_t	expand_only;
 	uint8_t	forward_only;
@@ -1187,12 +1205,16 @@ struct dispatcher_remote {
 	char	*mail_from;
 
 	char	*smarthost;
+	int	 smarthost_domain;
+
 	char	*auth;
 	int	 tls_required;
 	int	 tls_noverify;
 
 	int	 backup;
 	char	*backupmx;
+
+	char	*filtername;
 
 	int	 srs;
 };
@@ -1359,7 +1381,7 @@ int lka(void);
 
 /* lka_proc.c */
 int lka_proc_ready(void);
-void lka_proc_forked(const char *, int);
+void lka_proc_forked(const char *, uint32_t, int);
 void lka_proc_errfd(const char *, int);
 struct io *lka_proc_get_io(const char *);
 
@@ -1398,7 +1420,7 @@ void lka_filter_init(void);
 void lka_filter_register_hook(const char *, const char *);
 void lka_filter_ready(void);
 int lka_filter_proc_in_session(uint64_t, const char *);
-void lka_filter_begin(uint64_t, const char *, const struct sockaddr_storage *, const struct sockaddr_storage *, const char *, int);
+void lka_filter_begin(uint64_t, const char *);
 void lka_filter_end(uint64_t);
 void lka_filter_protocol(uint64_t, enum filter_phase, const char *);
 void lka_filter_data_begin(uint64_t);
@@ -1420,6 +1442,10 @@ void logit(int, const char *, ...) __attribute__((format (printf, 2, 3)));
 void mda_postfork(void);
 void mda_postprivdrop(void);
 void mda_imsg(struct mproc *, struct imsg *);
+
+
+/* mda_mbox.c */
+void mda_mbox(struct deliver *);
 
 
 /* mda_unpriv.c */

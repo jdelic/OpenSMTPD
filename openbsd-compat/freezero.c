@@ -21,8 +21,8 @@
 
 #include "includes.h"
 
-#ifndef HAVE_FREEZERO
 #include <stdlib.h>
+#include <strings.h>
 
 void
 freezero(void *ptr, size_t sz)
@@ -32,5 +32,3 @@ freezero(void *ptr, size_t sz)
 	explicit_bzero(ptr, sz);
 	free(ptr);
 }
-
-#endif /* HAVE_FREEZERO */

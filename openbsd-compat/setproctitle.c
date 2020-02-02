@@ -33,8 +33,6 @@
 
 #include "includes.h"
 
-#ifndef HAVE_SETPROCTITLE
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,8 +64,6 @@
 static char *argv_start = NULL;
 static size_t argv_env_len = 0;
 #endif
-
-#endif /* HAVE_SETPROCTITLE */
 
 void
 compat_init_setproctitle(int argc, char *argv[])
@@ -123,7 +119,6 @@ compat_init_setproctitle(int argc, char *argv[])
 #endif /* SPT_REUSEARGV */
 }
 
-#ifndef HAVE_SETPROCTITLE
 void
 setproctitle(const char *fmt, ...)
 {
@@ -170,5 +165,3 @@ setproctitle(const char *fmt, ...)
 
 #endif /* SPT_NONE */
 }
-
-#endif /* HAVE_SETPROCTITLE */

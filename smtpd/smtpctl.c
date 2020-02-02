@@ -1,4 +1,4 @@
-/*	$OpenBSD: smtpctl.c,v 1.165 2019/07/23 08:11:10 gilles Exp $	*/
+/*	$OpenBSD: smtpctl.c,v 1.166 2020/01/06 11:03:06 gilles Exp $	*/
 
 /*
  * Copyright (c) 2013 Eric Faurot <eric@openbsd.org>
@@ -966,7 +966,7 @@ do_encrypt(int argc, struct parameter *argv)
 
 	if (argv)
 		p = argv[0].u.u_str;
-	execl(PATH_ENCRYPT, "encrypt", p, (char *)NULL);
+	execl(PATH_ENCRYPT, "encrypt", "--", p, (char *)NULL);
 	errx(1, "execl");
 }
 
@@ -1062,10 +1062,19 @@ int
 main(int argc, char **argv)
 {
 	gid_t		 gid;
+	struct group    *gr;
 	int		 privileged;
 	char		*argv_mailq[] = { "show", "queue", NULL };
 
+#ifndef HAVE___PROGNAME
 	__progname = ssh_get_progname(argv[0]);
+#endif
+
+	/* check that smtpctl was installed setgid */
+	if ((gr = getgrnam(SMTPD_QUEUE_GROUP)) == NULL)
+		errx(1, "unknown group %s", SMTPD_QUEUE_GROUP);
+	else if (gr->gr_gid != getegid())
+		errx(1, "this program must be setgid %s", SMTPD_QUEUE_GROUP);
 
 	sendmail_compat(argc, argv);
 	privileged = geteuid() == 0;

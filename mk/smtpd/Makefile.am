@@ -32,11 +32,10 @@ smtpd_SOURCES+=		$(smtpd_srcdir)/ioev.c
 smtpd_SOURCES+=		$(smtpd_srcdir)/limit.c
 smtpd_SOURCES+=		$(smtpd_srcdir)/lka.c
 smtpd_SOURCES+=		$(smtpd_srcdir)/lka_filter.c
-smtpd_SOURCES+=		$(smtpd_srcdir)/lka_proc.c
-smtpd_SOURCES+=		$(smtpd_srcdir)/lka_report.c
 smtpd_SOURCES+=		$(smtpd_srcdir)/lka_session.c
 smtpd_SOURCES+=		$(smtpd_srcdir)/log.c
 smtpd_SOURCES+=		$(smtpd_srcdir)/mda.c
+smtpd_SOURCES+=		$(smtpd_srcdir)/mda_mbox.c
 smtpd_SOURCES+=		$(smtpd_srcdir)/mda_unpriv.c
 smtpd_SOURCES+=		$(smtpd_srcdir)/mda_variables.c
 smtpd_SOURCES+=		$(smtpd_srcdir)/mproc.c
@@ -94,14 +93,17 @@ smtpd_CFLAGS+=		-DCA_FILE=\"$(CA_FILE)\"
 
 AM_CPPFLAGS=		-I$(smtpd_srcdir)	\
 			-I$(compat_srcdir)
-if !SUPPORT_ERR_H
+if !NEED_ERR_H
 AM_CPPFLAGS += -I$(top_srcdir)/openbsd-compat/err_h
 endif
 if !SUPPORT_PATHS_H
 AM_CPPFLAGS += -I$(top_srcdir)/openbsd-compat/paths_h
 endif
 
-LIBCOMPAT=		$(top_builddir)/openbsd-compat/libopenbsd-compat.a
+LIBCOMPAT=		$(top_builddir)/openbsd-compat/libopenbsd.a
+if NEED_LIBASR
+AM_CPPFLAGS+=	-I$(top_srcdir)/openbsd-compat/libasr
+endif
 
 LDADD=			$(LIBCOMPAT) $(DB_LIB) $(ASR_LIB)
 

@@ -1,4 +1,4 @@
-/*	$OpenBSD: smtpd.c,v 1.325 2019/09/03 04:48:20 martijn Exp $	*/
+/*	$OpenBSD: smtpd.c,v 1.330 2020/02/01 12:54:38 gilles Exp $	*/
 
 /*
  * Copyright (c) 2008 Gilles Chehade <gilles@poolp.org>
@@ -121,8 +121,8 @@ static int	parent_auth_user(const char *, const char *);
 static void	load_pki_tree(void);
 static void	load_pki_keys(void);
 
-static void	fork_processors(void);
-static void	fork_processor(const char *, const char *, const char *, const char *, const char *);
+static void	fork_filter_processes(void);
+static void	fork_filter_process(const char *, const char *, const char *, const char *, const char *, uint32_t);
 
 enum child_type {
 	CHILD_DAEMON,
@@ -191,7 +191,7 @@ static void
 parent_imsg(struct mproc *p, struct imsg *imsg)
 {
 	struct forward_req	*fwreq;
-	struct processor	*processor;
+	struct filter_proc	*processor;
 	struct deliver		 deliver;
 	struct child		*c;
 	struct msg		 m;
@@ -295,7 +295,7 @@ parent_imsg(struct mproc *p, struct imsg *imsg)
 		m_get_string(&m, &procname);
 		m_end(&m);
 
-		processor = dict_xget(env->sc_processors_dict, procname);
+		processor = dict_xget(env->sc_filter_processes_dict, procname);
 		m_create(p_lka, IMSG_LKA_PROCESSOR_ERRFD, 0, 0, processor->errfd);
 		m_add_string(p_lka, procname);
 		m_close(p_lka);
@@ -517,24 +517,26 @@ main(int argc, char *argv[])
 	char		*rexec = NULL;
 	struct smtpd	*conf;
 
+#ifndef HAVE___PROGNAME
 	__progname = ssh_get_progname(argv[0]);
-
-	/* Save argv. Duplicate so setproctitle emulation doesn't clobber it */
-	saved_argc = argc;
-	saved_argv = __xcalloc(argc + 1, sizeof(*saved_argv));
-	for (i = 0; i < argc; i++)
-		saved_argv[i] = __xstrdup(argv[i]);
-	saved_argv[i] = NULL;
+#endif
 
 #ifndef HAVE_SETPROCTITLE
+	/* Save argv. Duplicate so setproctitle emulation doesn't clobber it */
+	saved_argc = argc;
+	saved_argv = xcalloc(argc + 1, sizeof(*saved_argv));
+	for (i = 0; i < argc; i++)
+		saved_argv[i] = xstrdup(argv[i]);
+	saved_argv[i] = NULL;
+
 	/* Prepare for later setproctitle emulation */
 	compat_init_setproctitle(argc, argv);
 	argv = saved_argv;
-#endif
 
 	/* this is to work around GNU getopt + portable setproctitle() fuckery */
 	save_argc = saved_argc;
 	save_argv = saved_argv;
+#endif
 
 	if ((conf = config_default()) == NULL)
 		err(1, NULL);
@@ -666,7 +668,8 @@ main(int argc, char *argv[])
 	if (parse_config(conf, conffile, opts))
 		exit(1);
 
-	seed_rng();
+	if (RAND_status() != 1)
+		errx(1, "PRNG is not seeded");
 
 	if (strlcpy(env->sc_conffile, conffile, PATH_MAX)
 	    >= PATH_MAX)
@@ -1137,7 +1140,7 @@ smtpd(void) {
 	if (pidfile(NULL) < 0)
 		err(1, "pidfile");
 
-	fork_processors();
+	fork_filter_processes();
 
 	purge_task();
 
@@ -1316,22 +1319,46 @@ purge_task(void)
 }
 
 static void
-fork_processors(void)
+fork_filter_processes(void)
 {
 	const char	*name;
-	struct processor	*processor;
 	void		*iter;
+	const char	*fn;
+	struct filter_config *fc;
+	struct filter_config *fcs;
+	struct filter_proc *fp;
+	size_t		 i;
+
+	/* For each filter chain, assign the registered subsystem to subfilters */
+	iter = NULL;
+	while (dict_iter(env->sc_filters_dict, &iter, (const char **)&fn, (void **)&fc)) {
+		if (fc->chain) {
+			for (i = 0; i < fc->chain_size; ++i) {
+				fcs = dict_xget(env->sc_filters_dict, fc->chain[i]);
+				fcs->filter_subsystem |= fc->filter_subsystem;
+			}
+		}
+	}
+
+	/* For each filter, assign the registered subsystem to underlying proc */
+	iter = NULL;
+	while (dict_iter(env->sc_filters_dict, &iter, (const char **)&fn, (void **)&fc)) {
+		if (fc->proc) {
+			fp = dict_xget(env->sc_filter_processes_dict, fc->proc);
+			fp->filter_subsystem |= fc->filter_subsystem;
+		}
+	}
 
 	iter = NULL;
-	while (dict_iter(env->sc_processors_dict, &iter, &name, (void **)&processor))
-		fork_processor(name, processor->command, processor->user, processor->group, processor->chroot);
+	while (dict_iter(env->sc_filter_processes_dict, &iter, &name, (void **)&fp))
+		fork_filter_process(name, fp->command, fp->user, fp->group, fp->chroot, fp->filter_subsystem);
 }
 
 static void
-fork_processor(const char *name, const char *command, const char *user, const char *group, const char *chroot_path)
+fork_filter_process(const char *name, const char *command, const char *user, const char *group, const char *chroot_path, uint32_t subsystems)
 {
 	pid_t		 pid;
-	struct processor	*processor;
+	struct filter_proc	*processor;
 	char		 buf;
 	int		 sp[2], errfd[2];
 	struct passwd	*pw;
@@ -1363,13 +1390,14 @@ fork_processor(const char *name, const char *command, const char *user, const ch
 
 	/* parent passes the child fd over to lka */
 	if (pid > 0) {
-		processor = dict_xget(env->sc_processors_dict, name);
+		processor = dict_xget(env->sc_filter_processes_dict, name);
 		processor->errfd = errfd[1];
 		child_add(pid, CHILD_PROCESSOR, name);
 		close(sp[0]);
 		close(errfd[0]);
 		m_create(p_lka, IMSG_LKA_PROCESSOR_FORK, 0, 0, sp[1]);
 		m_add_string(p_lka, name);
+		m_add_u32(p_lka, (uint32_t)subsystems);
 		m_close(p_lka);
 		return;
 	}
@@ -1388,7 +1416,7 @@ fork_processor(const char *name, const char *command, const char *user, const ch
 	if (setgroups(1, &gr->gr_gid) ||
 	    setresgid(gr->gr_gid, gr->gr_gid, gr->gr_gid) ||
 	    setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid))
-		err(1, "fork_processor: cannot drop privileges");
+		err(1, "fork_filter_process: cannot drop privileges");
 
 	xclosefrom(STDERR_FILENO + 1);
 
@@ -1478,7 +1506,7 @@ forkmda(struct mproc *p, uint64_t id, struct deliver *deliver)
 		pw_dir = deliver->userinfo.directory;
 	}
 
-	if (pw_uid == 0 && !dsp->u.local.requires_root) {
+	if (pw_uid == 0 && !dsp->u.local.is_mbox) {
 		(void)snprintf(ebuf, sizeof ebuf, "not allowed to deliver to: %s",
 		    deliver->userinfo.username);
 		m_create(p_pony, IMSG_MDA_DONE, 0, 0, -1);
@@ -1567,7 +1595,12 @@ forkmda(struct mproc *p, uint64_t id, struct deliver *deliver)
 	/* avoid hangs by setting 5m timeout */
 	alarm(300);
 
-	mda_unpriv(dsp, deliver, pw_name, pw_dir);
+	if (dsp->u.local.is_mbox &&
+	    dsp->u.local.mda_wrapper == NULL &&
+	    deliver->mda_exec[0] == '\0')
+		mda_mbox(deliver);
+	else
+		mda_unpriv(dsp, deliver, pw_name, pw_dir);
 }
 
 static void
@@ -2106,6 +2139,9 @@ imsg_to_str(int type)
 	CASE(IMSG_REPORT_SMTP_LINK_CONNECT);
 	CASE(IMSG_REPORT_SMTP_LINK_DISCONNECT);
 	CASE(IMSG_REPORT_SMTP_LINK_TLS);
+	CASE(IMSG_REPORT_SMTP_LINK_GREETING);
+	CASE(IMSG_REPORT_SMTP_LINK_IDENTIFY);
+	CASE(IMSG_REPORT_SMTP_LINK_AUTH);
 
 	CASE(IMSG_REPORT_SMTP_TX_RESET);
 	CASE(IMSG_REPORT_SMTP_TX_BEGIN);
@@ -2153,7 +2189,7 @@ parent_auth_bsd(const char *username, const char *password)
 #ifdef USE_PAM
 int 
 pam_conv_password(int num_msg, const struct pam_message **msg,
-    struct pam_response **respp, const char *password)
+    struct pam_response **respp, void *password)
 {
 	struct pam_response *response;
 
@@ -2174,7 +2210,7 @@ parent_auth_pam(const char *username, const char *password)
 {
 	int rc;
 	pam_handle_t *pamh = NULL;
-	struct pam_conv conv = { pam_conv_password, password };
+	struct pam_conv conv = { pam_conv_password, (char *)password };
 
 	if ((rc = pam_start(USE_PAM_SERVICE, username, &conv, &pamh)) != PAM_SUCCESS)
 		goto end;

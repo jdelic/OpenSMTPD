@@ -64,7 +64,7 @@
 #endif
 
 #ifndef LOGIN_NAME_MAX
-# define LOGIN_NAME_MAX 9
+# define LOGIN_NAME_MAX 32
 #endif
 
 #ifndef MAXLOGNAME
@@ -357,21 +357,6 @@ typedef uint16_t	in_port_t;
 
 /* Function replacement / compatibility hacks */
 
-#ifndef HAVE_GETOPT_OPTRESET
-# undef getopt
-# undef opterr
-# undef optind
-# undef optopt
-# undef optreset
-# undef optarg
-# define getopt(ac, av, o)  BSDgetopt(ac, av, o)
-# define opterr             BSDopterr
-# define optind             BSDoptind
-# define optopt             BSDoptopt
-# define optreset           BSDoptreset
-# define optarg             BSDoptarg
-#endif
-
 #if defined(BROKEN_GETADDRINFO) && defined(HAVE_GETADDRINFO)
 # undef HAVE_GETADDRINFO
 #endif
@@ -504,6 +489,10 @@ typedef uint16_t	in_port_t;
 
 #if !HAVE_DECL_LOG_PERROR
 #define LOG_PERROR 0
+#endif
+
+#ifndef MAXDNAME
+#define MAXDNAME 1025
 #endif
 
 #endif /* _DEFINES_H */

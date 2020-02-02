@@ -42,7 +42,6 @@
 #include <sys/queue.h>
 #include <sys/tree.h>
 #include "bsd-vis.h"
-#include "xmalloc.h"
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
@@ -123,14 +122,18 @@ int getpeereid(int , uid_t *, gid_t *);
 unsigned int arc4random(void);
 #endif
 
-#if defined(HAVE_ARC4RANDOM_STIR)
+#if 0
+#if defined(LIBRESSL_VERSION_NUMBER)
+# define arc4random_stir()
+#elif defined(HAVE_ARC4RANDOM_STIR)
 void arc4random_stir(void);
-#elif defined(HAVE_ARC4RANDOM) || defined(LIBRESSL_VERSION_NUMBER)
+#elif defined(HAVE_ARC4RANDOM)
 /* Recent system/libressl implementation; no need for explicit stir */
 # define arc4random_stir()
 #else
 /* openbsd-compat/arc4random.c provides arc4random_stir() */
 void arc4random_stir(void);
+#endif
 #endif
 
 #if !defined(HAVE_ARC4RANDOM_BUF) || defined(LIBRESSL_VERSION_NUMBER)
@@ -222,6 +225,7 @@ void *recallocarray(void *, size_t, size_t, size_t);
 #endif
 
 #ifndef HAVE_ERRC
+__attribute__ ((noreturn))
 void errc(int, int, const char *, ...);
 #endif
 
@@ -288,5 +292,51 @@ char * strndup(const char *, size_t);
 #ifndef HAVE_STRNLEN
 char * strnlen(const char *, size_t);
 #endif
+
+#ifndef HAVE_STRUCT_TIMEVAL
+struct timeval {
+	long tv_sec;
+	long tv_usec;
+}
+#endif
+
+#ifdef NEED_NANOSLEEP
+#ifndef HAVE_STRUCT_TIMESPEC
+struct timespec {
+	time_t	tv_sec;
+	long	tv_nsec;
+};
+#endif
+int nanosleep(const struct timespec *, struct timespec *);
+#endif
+
+#ifdef NEED_SETEGID
+int setegid(uid_t);
+#endif
+
+#ifdef NEED_SETEUID
+int seteuid(uid_t);
+#endif
+
+#ifdef NEED_SETSID
+#define setsid() setpgrp(0, getpid())
+#endif
+
+#ifdef NEED_SIGNAL
+typedef void (*mysig_t)(int);
+mysig_t mysignal(int sig, mysig_t act);
+#define signal(a,b) mysignal(a,b)
+#endif
+
+#ifdef NEED_STRERROR
+const char *strerror(int);
+#endif
+
+#ifdef NEED_USLEEP
+int usleep(unsigned int useconds);
+#endif
+
+char *get_progname(char *);
+
 
 #endif /* _OPENBSD_COMPAT_H */

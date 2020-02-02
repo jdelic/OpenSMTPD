@@ -39,3 +39,18 @@ smtpd/smtpctl/CVS/*
 #Editor temporary files
 *~
 .idea
+
+# Coverity
+cov-int/
+cov-analysis-linux64/
+cov-analysis-linux64.tgz
+opensmtpd.tgz
+
+# Clang scan-build
+clang-report/
+
+
+# TLS certs
+open.smtpd.cert
+open.smtpd.csr
+open.smtpd.key

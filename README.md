@@ -1,4 +1,11 @@
-# Preliminary note
+# OpenSMTPD
+
+[![Version](https://img.shields.io/badge/Version-6.6.1p1-brihtgreen.svg)](https://github.com/OpenSMTPD/OpenSMTPD/releases/tag/6.6.1p1)
+[![Coverity Scan analysis](https://scan.coverity.com/projects/278/badge.svg)](https://scan.coverity.com/projects/opensmtpd-opensmtpd)
+[![Packaging status](https://repology.org/badge/tiny-repos/opensmtpd.svg)](https://repology.org/project/opensmtpd/versions)
+[![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://www.isc.org/licenses/)
+[![Clang Analysis](https://opensmtpd.email/reports/clang/badge.svg)](https://opensmtpd.email/reports/clang/index.html)
+
 
 OpenSMTPD is a FREE implementation of the server-side SMTP protocol as
 defined by [RFC 5321](https://tools.ietf.org/html/rfc5321), with some
@@ -40,9 +47,13 @@ Portable OpenSMTPD relies on:
     or byacc (http://invisible-island.net/byacc/byacc.html)
   * libevent (http://libevent.org/)
   * libtool (http://www.gnu.org/software/libtool/)
-  * libressl (https://www.libressl.org/) >= 3.0.2
-    or OpenSSL (https://www.openssl.org/) >= 1.1.0
-  * libasr (https://opensmtpd.org/archives/libasr-1.0.3.tar.gz) >= 1.0.3
+  * libressl (https://www.libressl.org/)
+    or OpenSSL (https://www.openssl.org/)
+
+
+By default OpenSMTPD expects latest versions of all dependencies unless noted otherwise.
+
+Note that some distributions have different packages for a same library, you should always use the `-dev` or `-devel` package (for example, `libevent-dev` or `libevent-devel`) if you're going to build OpenSMTPD yourself.
 
 
 ## Get the source
