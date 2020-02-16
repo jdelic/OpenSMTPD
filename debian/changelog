@@ -1,3 +1,9 @@
+opensmtpd (6.6.3p1-2~748ff68) unstable; urgency=medium
+
+  * Experimental build from upstream 6.6.3p1 (portable)
+
+ -- Jonas Maurus <jm>  Sun, 16 Feb 2020 13:20:00 +0100
+
 opensmtpd (6.6.2p1-2~707c2d8) unstable; urgency=medium
 
   * Experimental build from upstream 6.6.2p1 (portable)
