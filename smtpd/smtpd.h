@@ -73,7 +73,7 @@
 #ifndef SMTPD_NAME
 #define	SMTPD_NAME		 "OpenSMTPD"
 #endif
-#define	SMTPD_VERSION		 "6.6.2p1"
+#define	SMTPD_VERSION		 "6.6.3p1"
 #define SMTPD_SESSION_TIMEOUT	 300
 #define SMTPD_BACKLOG		 5
 
@@ -1160,7 +1160,7 @@ enum dispatcher_type {
 };
 
 struct dispatcher_local {
-	uint8_t requires_root;	/* only for MBOX */
+	uint8_t is_mbox;	/* only for MBOX */
 
 	uint8_t	expand_only;
 	uint8_t	forward_only;
@@ -1420,6 +1420,11 @@ void logit(int, const char *, ...) __attribute__((format (printf, 2, 3)));
 void mda_postfork(void);
 void mda_postprivdrop(void);
 void mda_imsg(struct mproc *, struct imsg *);
+
+
+/* mda_mbox.c */
+void mda_mbox_init(struct deliver *);
+void mda_mbox(struct deliver *);
 
 
 /* mda_unpriv.c */

@@ -572,7 +572,7 @@ SRS KEY STRING {
 
 dispatcher_local_option:
 USER STRING {
-	if (dispatcher->u.local.requires_root) {
+	if (dispatcher->u.local.is_mbox) {
 		yyerror("user may not be specified for this dispatcher");
 		YYERROR;
 	}
@@ -668,8 +668,7 @@ dispatcher_local_option dispatcher_local_options
 
 dispatcher_local:
 MBOX {
-	dispatcher->u.local.requires_root = 1;
-	dispatcher->u.local.user = xstrdup("root");
+	dispatcher->u.local.is_mbox = 1;
 	asprintf(&dispatcher->u.local.command, PATH_LIBEXEC"/mail.local -f %%{mbox.from} %%{user.username}");
 } dispatcher_local_options
 | MAILDIR {
@@ -696,11 +695,11 @@ MBOX {
 } dispatcher_local_options
 | LMTP STRING {
 	asprintf(&dispatcher->u.local.command,
-	    PATH_LIBEXEC"/mail.lmtp -f \"%%{sender}\" -d %s %%{user.username}", $2);
+	    PATH_LIBEXEC"/mail.lmtp -d \"%s\" -u", $2);
 } dispatcher_local_options
 | LMTP STRING RCPT_TO {
 	asprintf(&dispatcher->u.local.command,
-	    PATH_LIBEXEC"/mail.lmtp -f \"%%{sender}\" -d %s %%{dest}", $2);
+	    PATH_LIBEXEC"/mail.lmtp -d \"%s\" -r", $2);
 } dispatcher_local_options
 | MDA STRING {
 	asprintf(&dispatcher->u.local.command,

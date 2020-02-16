@@ -34,6 +34,10 @@
 # define EAUTH 80
 #endif
 
+#ifndef INFTIM
+#define INFTIM	(-1)
+#endif
+
 #ifndef HOST_NAME_MAX
 # ifdef _POSIX_HOST_NAME_MAX
 # define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
@@ -90,6 +94,10 @@
 
 #if !HAVE_DECL_O_NONBLOCK
 # define O_NONBLOCK      00004	/* Non Blocking Open */
+#endif
+
+#ifndef O_EXLOCK
+#define	O_EXLOCK	0
 #endif
 
 #ifndef S_ISDIR
@@ -214,6 +222,10 @@ typedef uint16_t	in_port_t;
 #endif
 
 /* user may have set a different path */
+#if !defined(_PATH_MAILDIR)
+# define _PATH_MAILDIR "/var/spool/mail"
+#endif
+
 #if defined(_PATH_MAILDIR) && defined(MAIL_DIRECTORY)
 # undef _PATH_MAILDIR
 #endif /* defined(_PATH_MAILDIR) && defined(MAIL_DIRECTORY) */
